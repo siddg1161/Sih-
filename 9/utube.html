@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relaxation Videos</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", sans-serif; }
+    body { display: flex; background: #f9f9f9; color: #333; }
+    /* Sidebar */
+    .sidebar { 
+      width: 300px; 
+      background: #fff; 
+      border-right: 1px solid #ddd; 
+      padding: 30px; 
+      height: 100vh; 
+      position: fixed; 
+      left: 0; 
+      top: 0; 
+      font-size: 22px;
+    }
+    .logo { font-size: 30px; font-weight: bold; margin-bottom: 40px; color: #1976d2; }
+    .nav { list-style: none; }
+    .nav li { padding: 18px; cursor: pointer; border-radius: 12px; transition: 0.3s; margin-bottom: 12px; }
+    .nav li:hover, .nav li.active { background: #e3f2fd; color: #1976d2; }
+    /* Main Content */
+    .main { margin-left: 300px; flex: 1; padding: 40px; overflow-y: auto; }
+    .header { font-size: 36px; margin-bottom: 30px; font-weight: bold; color: #444; }
+    .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 30px; }
+    .video-card { 
+      background: #fff; 
+      border-radius: 16px; 
+      overflow: hidden; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12); 
+      transition: 0.3s; 
+    }
+    .video-card:hover { transform: translateY(-6px); }
+    .video-card iframe { width: 100%; height: 260px; border: none; border-bottom: 1px solid #ddd; }
+    .video-info { padding: 18px; }
+    .video-title { font-size: 22px; font-weight: bold; color: #222; margin-bottom: 10px; }
+    .video-artist { font-size: 18px; color: #777; }
+    /* Theatre Mode */
+    .video-card.theatre { 
+      grid-column: 1 / -1;
+      background: #000;
+      z-index: 1;
+      box-shadow: 0 8px 24px rgba(25,118,210,0.13);
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .video-card.theatre iframe { height: 600px; }
+    .video-card.theatre .video-info { padding: 20px; font-size: 22px; color: #fff; }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">RelaxTube</div>
+    <ul class="nav">
+      <li class="active">Home</li>
+      <li>Playlists</li>
+      <li>Favorites</li>
+    </ul>
+  </div>
+  <!-- Main Content -->
+  <div class="main">
+    <div class="header">Relaxation & Therapy Videos</div>
+    <div class="video-grid" id="videoGrid">
+      <!-- Video 1 -->
+      <div class="video-card">
+        <iframe src="https://www.youtube.com/embed/2OEL4P1Rz04?enablejsapi=1" allowfullscreen></iframe>
+        <div class="video-info">
+          <div class="video-title">Relaxing Ocean Waves</div>
+          <div class="video-artist">Nature Sounds</div>
+        </div>
+      </div>
+      <!-- Video 2 -->
+      <div class="video-card">
+        <iframe src="https://www.youtube.com/embed/1ZYbU82GVz4?enablejsapi=1" allowfullscreen></iframe>
+        <div class="video-info">
+          <div class="video-title">Deep Sleep Music</div>
+          <div class="video-artist">Soothing Relaxation</div>
+        </div>
+      </div>
+      <!-- Video 3 -->
+      <div class="video-card">
+        <iframe src="https://www.youtube.com/embed/lFcSrYw-ARY?enablejsapi=1" allowfullscreen></iframe>
+        <div class="video-info">
+          <div class="video-title">Calm Piano Music</div>
+          <div class="video-artist">Relaxing Sounds</div>
+        </div>
+      </div>
+      <!-- Video 4 -->
+      <div class="video-card">
+        <iframe src="https://www.youtube.com/embed/1EUM8jtJ-6Q?enablejsapi=1" allowfullscreen></iframe>
+        <div class="video-info">
+          <div class="video-title">Rain Sounds for Sleep</div>
+          <div class="video-artist">Sleepy Rain</div>
+        </div>
+      </div>
+      <!-- Video 5 -->
+      <div class="video-card">
+        <iframe src="https://www.youtube.com/embed/jfKfPfyJRdk?enablejsapi=1" allowfullscreen></iframe>
+        <div class="video-info">
+          <div class="video-title">Lofi Hip Hop Beats</div>
+          <div class="video-artist">ChilledCow</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- YouTube API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    let players = [];
+    let currentPlaying = null;
+    function onYouTubeIframeAPIReady() {
+      const iframes = document.querySelectorAll("iframe");
+      iframes.forEach((iframe, index) => {
+        const player = new YT.Player(iframe, {
+          events: {
+            'onStateChange': (event) => onPlayerStateChange(event, iframe)
+          }
+        });
+        players.push(player);
+      });
+    }
+    function onPlayerStateChange(event, iframe) {
+      const card = iframe.parentElement;
+      const videoGrid = document.getElementById("videoGrid");
+
+      if (event.data === YT.PlayerState.PLAYING) {
+        // Pause all other videos
+        players.forEach(p => {
+          if (p.getIframe() !== iframe) p.pauseVideo();
+        });
+        // Remove theatre from others
+        document.querySelectorAll(".video-card").forEach(c => c.classList.remove("theatre"));
+        // Add theatre to current and move it to top
+        card.classList.add("theatre");
+        videoGrid.prepend(card);
+
+        currentPlaying = iframe;
+      }
+      if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+        if (iframe === currentPlaying) {
+          card.classList.remove("theatre");
+          currentPlaying = null;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Peer to Peer Group Chat — Fixed Compose</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --sidebar-width: 400px;      /* desktop sidebar width */
+      --compose-height: 72px;      /* height of the fixed compose bar */
+      --bg: #fefefe;
+      --card: #ffffff;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --muted: #475569;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --msg-bg: #f1f5f9;
+      --msg-mine: #2563eb;
+      --sidebar-bg: #f0f4ff;
+    }
+
+    * { box-sizing: border-box; font-family: 'Nunito Sans', sans-serif; }
+
+    html,body { height: 100%; margin: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-size: 20px;
+      height: 100vh;
+      overflow: hidden; /* prevent page-level scrolling */
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Layout */
+    .app {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      height: 100%;
+      width: 100%;
+      background: var(--card);
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .panel {
+      padding: 32px;
+      border-right: 1px solid var(--border);
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: auto;
+    }
+
+    h2 { margin: 0 0 20px 0; font-size: 28px; font-weight: 900; }
+    label { display:block; margin-top:18px; font-size:20px; font-weight:700; color:var(--muted); }
+    input, button { padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border); font-size:18px; }
+    input { width:100%; background:#fff; outline:none; }
+    input:focus { border-color: var(--accent); }
+    button { cursor:pointer; background:var(--accent); color:#fff; border:none; font-weight:800; }
+    button:hover { background: var(--accent-hover); }
+    .small-muted { font-size: 14px; color:var(--muted); }
+
+    /* Chat area (right column) */
+    .right {
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      height: 100%;
+      position: relative;
+      overflow: hidden; /* keep messages scroll inside this column */
+    }
+
+    .chat-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      background:#f9fafb;
+      font-size:22px;
+      font-weight:900;
+      flex-shrink:0;
+    }
+
+    .controls button {
+      background: #e2e8f0;
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 16px;
+      font-weight:700;
+      border: none;
+    }
+
+    /* Messages container: occupies available space, scrollable */
+    .messages {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      font-size: 18px;
+      line-height: 1.5;
+      /* ensure messages have space to be visible above the fixed compose bar */
+      padding-bottom: calc(var(--compose-height) + 20px);
+      /* keep messages area height within the column */
+      flex: 1 1 auto;
+    }
+
+    .msg {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: var(--msg-bg);
+      word-wrap: break-word;
+      font-weight: 600;
+    }
+
+    .mine {
+      align-self: flex-end;
+      background: var(--msg-mine);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    /* FIXED compose bar — fixed to viewport bottom but sized to the chat column */
+    .compose {
+      position: fixed;
+      bottom: 0;
+      left: var(--sidebar-width);               /* start after the left sidebar */
+      width: calc(100% - var(--sidebar-width)); /* occupy the right column width */
+      height: var(--compose-height);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: #f9fafb;
+      z-index: 60;
+      box-shadow: 0 -8px 20px rgba(15,23,42,0.04);
+    }
+
+    .compose input {
+      flex: 1;
+      font-size: 16px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .compose button {
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-weight: 800;
+      border: none;
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+    }
+
+    /* Small screens: hide sidebar and make compose full width */
+    @media (max-width: 768px) {
+      :root { --sidebar-width: 0px; }
+      .app { grid-template-columns: 1fr; }
+      .panel { display: none; }
+      .compose { left: 0; width: 100%; }
+    }
+
+   
+
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="panel left">
+      <div>
+        <h2>Peer to Peer Chat</h2>
+        <h2>Sign in</h2>
+        <div id="authUI">
+          <label>Email</label>
+          <input id="email" type="email" placeholder="you@example.com" />
+          <label>Password</label>
+          <input id="password" type="password" placeholder="minimum 6 chars" />
+          <div style="display:flex;gap:12px;margin-top:12px">
+            <button id="signupBtn">Sign up</button>
+            <button id="loginBtn">Log in</button>
+          </div>
+        </div>
+
+        <div id="lobbyUI" style="display:none; margin-top:24px">
+          <label>Display name</label>
+          <input id="displayName" placeholder="Your name" />
+          <label>Room name</label>
+          <input id="roomName" placeholder="e.g. creators-room" />
+          <div style="display:flex;gap:12px;margin-top:12px">
+            <button id="joinBtn">Join Room</button>
+            <button id="signoutBtn">Sign out</button>
+          </div>
+          <div class="small-muted" style="margin-top:20px">Participants</div>
+          <div class="members" id="membersList"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px">
+        <div class="small-muted">Local peer id: <span id="localId">—</span></div>
+        <div class="small-muted">Room: <span id="currentRoom">—</span></div>
+        <div class="small-muted">Status: <span id="status">idle</span></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="chat-header">
+        <div>
+          <strong id="roomTitle">Public Room</strong>
+          <div class="small-muted" id="subtitle">Messages are P2P using WebRTC</div>
+        </div>
+        <div class="controls">
+          <button id="copyLink">Copy Room Link</button>
+        </div>
+      </div>
+
+      <div class="messages" id="messages"></div>
+      <!-- NOTE: compose is intentionally placed inside the DOM but styled as fixed -->
+      <div class="compose" id="compose">
+        <input id="messageInput" placeholder="Type message and press Enter" />
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const messagesEl = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function appendMessage(text, who='other'){
+      const d = document.createElement('div');
+      d.className = 'msg' + (who==='me' ? ' mine' : '');
+      d.textContent = text;
+      messagesEl.appendChild(d);
+      // keep scroll pinned to bottom (newest messages at bottom)
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function sendMessage(){
+      const t = messageInput.value.trim();
+      if(!t) return;
+      appendMessage(`You: ${t}`,'me');
+
+      if(["hi","hello","hey","hii","helloo","yo"].includes(t.toLowerCase())){
+        setTimeout(()=> appendMessage("Rose: Hi, how can I help you?", 'other'), 500);
+      }
+
+      messageInput.value='';
+      messageInput.focus();
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // sample messages
+    const sampleMessages = [
+      {user:'Alice', text:'Hey everyone! How’s it going?'},
+      {user:'Bob', text:'All good here.'},
+      {user:'Rose', text:'hello'},
+    ];
+    sampleMessages.forEach(m => appendMessage(m.user+': '+m.text,'other'));
+
+    // optional: keep focus on input when clicking anywhere in messages (nice UX)
+    messagesEl.addEventListener('click', ()=> messageInput.focus());
+   
+    appendMessage("Alice: Hello!", "other");
+    appendMessage("Bob: Hi there", "other");
+  </script>
+</body>
+</html>

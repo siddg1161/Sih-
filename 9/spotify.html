@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Therapy Music Player</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", sans-serif; }
+    body { display: flex; height: 100vh; background: hwb(0 80% 19% / 0.326); color: #333; }
+
+    /* Sidebar */
+    .sidebar { width: 280px; background: #ffffff; padding: 30px; border-right: 1px solid #ddd; display: flex; flex-direction: column; justify-content: space-between; }
+    .nav { list-style: none; font-size: 20px; }
+    .nav li { padding: 15px; cursor: pointer; border-radius: 12px; transition: 0.3s; margin-bottom: 12px; }
+    .nav li:hover, .nav li.active { background: #1976d280; }
+
+    .playlist { margin-top: 30px; }
+    .playlist h3 { font-size: 22px; margin-bottom: 15px; color: #444; }
+    .playlist ul { list-style: none; font-size: 18px; }
+    .playlist li { padding: 12px; cursor: pointer; border-radius: 10px; transition: 0.3s; }
+    .playlist li:hover, .playlist li.active { background: #1976d280; color: white; }
+
+    /* Main Section */
+    .main { flex: 1; padding: 40px; display: flex; flex-direction: column; }
+    .header { font-size: 32px; margin-bottom: 30px; font-weight: bold; color: #444; }
+    .library { flex: 1; overflow-y: auto; padding-right: 15px; }
+
+    .song-item { display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 16px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); transition: 0.3s; }
+    .song-item:hover { background: #1976d24f; }
+    .song-info { display: flex; align-items: center; gap: 20px; }
+    .song-info img { width: 70px; height: 70px; border-radius: 12px; }
+    .song-title { font-weight: bold; font-size: 20px; color: #333; }
+    .song-artist { font-size: 16px; color: #777; }
+
+    .song-actions button { background: #4695e5; border: none; border-radius: 50%; width: 55px; height: 55px; font-size: 20px; cursor: pointer; transition: 0.3s; color: white; }
+    .song-actions button:hover { background: #1976d2; }
+
+    /* Footer Player Bar */
+    .footer { position: fixed; bottom: 0; left: 280px; right: 0; height: 120px; background: #f0f6fd; border-top: 1px solid #ccc; display: flex; align-items: center; justify-content: space-between; padding: 15px 40px; }
+    .footer .song-details { display: flex; align-items: center; gap: 25px; }
+    .footer img { width: 90px; height: 90px; border-radius: 14px; }
+    .footer .info { display: flex; flex-direction: column; font-size: 18px; }
+
+    .footer .controls { display: flex; align-items: center; gap: 30px; }
+    .footer button { background: #1976d2; border: none; border-radius: 50%; width: 65px; height: 65px; font-size: 26px; cursor: pointer; transition: 0.3s; color: white; }
+    .footer button:hover { background: #1976d27d; }
+
+    .progress-container { flex: 1; margin: 0 40px; display: flex; align-items: center; gap: 15px; font-size: 18px; }
+    .progress-bar { width: 100%; height: 10px; background: #eee; border-radius: 6px; cursor: pointer; position: relative; }
+    .progress { height: 10px; background: #1976d2; border-radius: 6px; width: 0%; }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div>
+      <ul class="nav">
+        <li class="active">Home</li>
+        <li>Library</li>
+        <li>Playlists</li>
+      </ul>
+      <div class="playlist">
+        <h3>Therapy Playlist</h3>
+        <ul id="playlist">
+          <li class="active">Peaceful Mind</li>
+          <li>Gentle Flow</li>
+          <li>Relax Vibes</li>
+        </ul>
+      </div>
+    </div>
+    <p style="font-size: 14px; color:#777;">© 2025 So So Co</p>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <div class="header">Music Library</div>
+    <div class="library" id="library"></div>
+  </div>
+
+  <!-- Footer Player -->
+  <div class="footer">
+    <div class="song-details">
+      <img id="footer-img" src="https://picsum.photos/id/1015/200" alt="Album Art">
+      <div class="info">
+        <span id="footer-title">Peaceful Mind</span>
+        <span id="footer-artist">Relaxation Sounds</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="prev">⏮</button>
+      <button id="play">▶</button>
+      <button id="next">⏭</button>
+    </div>
+
+    <div class="progress-container">
+      <span id="current-time">0:00</span>
+      <div class="progress-bar" id="progress-bar">
+        <div class="progress" id="progress"></div>
+      </div>
+      <span id="duration">0:00</span>
+    </div>
+  </div>
+
+  <audio id="audio"></audio>
+
+  <script>
+    const songs = [
+      { title: "Peaceful Mind", artist: "Relaxation Sounds", img: "https://picsum.photos/id/1015/200", src: "1.mp3" },
+      { title: "Gentle Flow", artist: "Calm Tunes", img: "https://picsum.photos/id/1025/200", src: "2.mp3" },
+      { title: "Relax Vibes", artist: "Nature Harmony", img: "https://picsum.photos/id/1035/200", src: "3.mp3" }
+    ];
+
+    let songIndex = 0;
+    let isPlaying = false;
+
+    const audio = document.getElementById("audio");
+    const playBtn = document.getElementById("play");
+    const prevBtn = document.getElementById("prev");
+    const nextBtn = document.getElementById("next");
+    const footerTitle = document.getElementById("footer-title");
+    const footerArtist = document.getElementById("footer-artist");
+    const footerImg = document.getElementById("footer-img");
+    const progress = document.getElementById("progress");
+    const progressBar = document.getElementById("progress-bar");
+    const currentTimeEl = document.getElementById("current-time");
+    const durationEl = document.getElementById("duration");
+    const library = document.getElementById("library");
+
+    // Inject library songs
+    songs.forEach((song, index) => {
+      const item = document.createElement("div");
+      item.classList.add("song-item");
+      item.innerHTML = `
+        <div class="song-info">
+          <img src="${song.img}" alt="">
+          <div>
+            <div class="song-title">${song.title}</div>
+            <div class="song-artist">${song.artist}</div>
+          </div>
+        </div>
+        <div class="song-actions">
+          <button onclick="playFromLibrary(${index})">▶</button>
+        </div>
+      `;
+      library.appendChild(item);
+    });
+
+    function loadSong(index) {
+      audio.src = songs[index].src;
+      footerTitle.textContent = songs[index].title;
+      footerArtist.textContent = songs[index].artist;
+      footerImg.src = songs[index].img;
+    }
+
+    function playSong() {
+      audio.play();
+      playBtn.textContent = "⏸";
+      isPlaying = true;
+    }
+
+    function pauseSong() {
+      audio.pause();
+      playBtn.textContent = "▶";
+      isPlaying = false;
+    }
+
+    playBtn.addEventListener("click", () => {
+      if (isPlaying) pauseSong();
+      else playSong();
+    });
+
+    prevBtn.addEventListener("click", () => {
+      songIndex = (songIndex - 1 + songs.length) % songs.length;
+      loadSong(songIndex);
+      playSong();
+    });
+
+    nextBtn.addEventListener("click", () => {
+      songIndex = (songIndex + 1) % songs.length;
+      loadSong(songIndex);
+      playSong();
+    });
+
+    function playFromLibrary(index) {
+      songIndex = index;
+      loadSong(songIndex);
+      playSong();
+    }
+
+    // Progress bar update
+    audio.addEventListener("timeupdate", () => {
+      const { currentTime, duration } = audio;
+      const progressPercent = (currentTime / duration) * 100;
+      progress.style.width = `${progressPercent}%`;
+
+      currentTimeEl.textContent = formatTime(currentTime);
+      durationEl.textContent = isNaN(duration) ? "0:00" : formatTime(duration);
+    });
+
+    progressBar.addEventListener("click", (e) => {
+      const width = progressBar.clientWidth;
+      const clickX = e.offsetX;
+      const duration = audio.duration;
+      audio.currentTime = (clickX / width) * duration;
+    });
+
+    function formatTime(sec) {
+      const minutes = Math.floor(sec / 60);
+      const seconds = Math.floor(sec % 60);
+      return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+    }
+
+    // Load first song
+    loadSong(songIndex);
+  </script>
+</body>
+</html>
